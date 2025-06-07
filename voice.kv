@@ -1,0 +1,16 @@
+<VoiceCommandApp>:
+    orientation: 'vertical'
+    padding: 10
+    spacing: 10
+
+    Button:
+        text: 'Start Voice Command'
+        size_hint_y: None
+        height: '48dp'
+        on_press: root.listen_command()
+
+    TextInput:
+        id: output
+        multiline: True
+        readonly: True
+        size_hint_y: 1 

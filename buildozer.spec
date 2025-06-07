@@ -1,0 +1,21 @@
+[app]
+title = Voice Command System
+package.name = voicecommand
+package.domain = org.test
+source.dir = .
+source.include_exts = py,png,jpg,kv,atlas
+version = 0.1
+requirements = python3,kivy,pyjnius,plyer,speechrecognition,pyttsx3,android
+orientation = portrait
+osx.python_version = 3
+osx.kivy_version = 2.3.1
+fullscreen = 0
+android.permissions = INTERNET, CALL_PHONE, READ_CONTACTS, RECORD_AUDIO
+android.api = 33
+android.minapi = 21
+android.ndk = 23b
+android.sdk = 33
+android.arch = arm64-v8a
+android.accept_sdk_license = True
+android.gradle_dependencies = androidx.core:core:1.6.0
+android.enable_androidx = True 
