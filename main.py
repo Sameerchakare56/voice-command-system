@@ -12,8 +12,13 @@ ANDROID = platform == 'android'
 if ANDROID:
     try:
         from jnius import autoclass
-        # Only import android.permissions on Android
         from android.permissions import request_permissions, Permission
+        # Import Android-specific modules
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        activity = PythonActivity.mActivity
+        Context = autoclass('android.content.Context')
+        Intent = autoclass('android.content.Intent')
+        Uri = autoclass('android.net.Uri')
     except ImportError:
         print("Android modules not available")
         ANDROID = False
@@ -24,10 +29,11 @@ class VoiceCommandApp(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.engine = None
-        try:
-            self.engine = pyttsx3.init()
-        except:
-            pass
+        if not ANDROID:
+            try:
+                self.engine = pyttsx3.init()
+            except:
+                pass
         
         # Request Android permissions only on Android
         if ANDROID:
@@ -60,10 +66,42 @@ class VoiceCommandApp(BoxLayout):
             if ANDROID:
                 tts.speak(text)
             else:
-                self.engine.say(text)
-                self.engine.runAndWait()
+                if self.engine:
+                    self.engine.say(text)
+                    self.engine.runAndWait()
         except Exception as e:
             self.ids.output.text += f"\nTTS error: {e}"
+
+    def make_phone_call(self, number):
+        if ANDROID:
+            try:
+                intent = Intent(Intent.ACTION_CALL)
+                intent.setData(Uri.parse(f"tel:{number}"))
+                activity.startActivity(intent)
+                return True
+            except Exception as e:
+                print(f"Error making call: {e}")
+                return False
+        else:
+            import webbrowser
+            webbrowser.open(f"tel:{number}")
+            return True
+
+    def open_whatsapp(self, number, message):
+        if ANDROID:
+            try:
+                intent = Intent(Intent.ACTION_VIEW)
+                intent.setData(Uri.parse(f"https://wa.me/91{number}?text={message}"))
+                activity.startActivity(intent)
+                return True
+            except Exception as e:
+                print(f"Error opening WhatsApp: {e}")
+                return False
+        else:
+            import webbrowser, urllib.parse
+            message = urllib.parse.quote(message)
+            webbrowser.open(f"https://wa.me/91{number}?text={message}")
+            return True
 
     def listen_command(self):
         recognizer = sr.Recognizer()
@@ -92,16 +130,14 @@ class VoiceCommandApp(BoxLayout):
             name = command.replace("call ", "").strip()
             number = get_contact_number_by_name(name)
             if number:
-                import webbrowser
-                webbrowser.open(f"tel:{number}")
-                self.speak(f"Calling {name}")
+                if self.make_phone_call(number):
+                    self.speak(f"Calling {name}")
+                else:
+                    self.speak("Failed to make the call")
             else:
                 self.speak(f"Couldn't find number for {name}")
         elif "whatsapp" in command:
-            import webbrowser, urllib.parse
             import re
-
-            # Updated pattern to better match the command format
             name_match = re.search(r"whatsapp to (.+?) message", command, re.IGNORECASE)
             msg_match = re.search(r"message (.+)$", command, re.IGNORECASE)
 
@@ -110,10 +146,11 @@ class VoiceCommandApp(BoxLayout):
                 message = msg_match.group(1).strip()
                 number = get_contact_number_by_name(name)
                 if number:
-                    message = urllib.parse.quote(message)
-                    number_clean = ''.join(filter(str.isdigit, number))[-10:]  # Ensure 10-digit format
-                    webbrowser.open(f"https://wa.me/91{number_clean}?text={message}")
-                    self.speak(f"Opening WhatsApp chat with {name}")
+                    number_clean = ''.join(filter(str.isdigit, number))[-10:]
+                    if self.open_whatsapp(number_clean, message):
+                        self.speak(f"Opening WhatsApp chat with {name}")
+                    else:
+                        self.speak("Failed to open WhatsApp")
                 else:
                     self.speak(f"Couldn't find WhatsApp number for {name}")
             else:
